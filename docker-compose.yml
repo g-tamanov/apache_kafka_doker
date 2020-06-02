@@ -1,7 +1,7 @@
 
 version: "3.3"
 services:
-  postgres_repmgr:
+  apache_kafka:
     container_name: apache_kafka_1
     hostname: apache_kafka_1
     build:

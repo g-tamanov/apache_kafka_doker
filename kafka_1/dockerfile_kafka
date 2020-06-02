@@ -18,42 +18,60 @@ rm -f /lib/systemd/system/anaconda.target.wants/*;
 # install services
 USER root:root
 RUN \
-yum sudo yum install java-1.8.0-openjdk.x86_64 -y&&\
+yum install java-1.8.0-openjdk.x86_64 -y&&\
 yum clean all;
 
+# Creating a User for Kafka
 USER root:root
-# environment variables JAVA
 RUN \
-echo "export JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk">> /etc/profile&&\
-echo "export JRE_HOME=/usr/lib/jvm/jre">> /etc/profile&&\
-source /etc/profile;
+adduser "kafka" &&\
+echo "kafka" | passwd "kafka" --stdin &&\
+usermod -aG wheel kafka ;
 
-USER root:root
-# Download Apache Kafka
+# Downloading and Extracting the Kafka Binaries
+USER kafka:kafka
 RUN \
-wget http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz&&\
-tar -xvf kafka_2.11-0.9.0.1.tgz&&\
-mv kafka_2.11-0.9.0.1 /opt;
+mkdir ~/Downloads &&\
+curl "https://downloads.apache.org/kafka/2.5.0/kafka_2.12-2.5.0.tgz" -o ~/Downloads/kafka.tgz &&\
+mkdir ~/kafka && cd ~/kafka &&\
+tar -xvzf ~/Downloads/kafka.tgz --strip 1;
 
-USER root:root
-# Start and test Apache Kafka
+# Configuring the Kafka Server
+USER kafka:kafka
 RUN \
-/opt/kafka_2.11-0.9.0.1/bin/zookeeper-server-start.sh -daemon config/zookeeper.properties;
+echo "delete.topic.enable = true">>~/kafka/config/server.properties;
 
+# Creating Systemd Unit Files and Starting the Kafka Server
 USER root:root
-# Modify the configuration of your Kafka server
 RUN \
-echo "export KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"">> bin/kafka-server-start.sh&&\
-echo "export KAFKA_HEAP_OPTS="-Xmx256M -Xms128M""">> bin/kafka-server-start.sh;
+ls /etc &&\
+echo "[Unit]">>/etc/systemd/system/zookeeper.service &&\
+echo "Requires=network.target remote-fs.target">>/etc/systemd/system/zookeeper.service &&\
+echo "After=network.target remote-fs.target">>/etc/systemd/system/zookeeper.service &&\
+echo "[Service]">>/etc/systemd/system/zookeeper.service &&\
+echo "Type=simple">>/etc/systemd/system/zookeeper.service &&\
+echo "User=kafka">>/etc/systemd/system/zookeeper.service &&\
+echo "ExecStart=/home/kafka/kafka/bin/zookeeper-server-start.sh /home/kafka/kafka/config/zookeeper.properties">>/etc/systemd/system/zookeeper.service &&\
+echo "ExecStop=/home/kafka/kafka/bin/zookeeper-server-stop.sh">>/etc/systemd/system/zookeeper.service &&\
+echo "Restart=on-abnormal">>/etc/systemd/system/zookeeper.service &&\
+echo "[Install]">>/etc/systemd/system/zookeeper.service &&\
+echo "WantedBy=multi-user.target">>/etc/systemd/system/zookeeper.service &&\
+echo "[Unit]">>/etc/systemd/system/kafka.service &&\
+echo "Requires=network.target remote-fs.target">>/etc/systemd/system/kafka.service &&\
+echo "After=network.target remote-fs.target">>/etc/systemd/system/kafka.service &&\
+echo "[Service]">>/etc/systemd/system/kafka.service &&\
+echo "Type=simple">>/etc/systemd/system/kafka.service &&\
+echo "User=kafka">>/etc/systemd/system/kafka.service &&\
+echo "ExecStart=/bin/sh -c '/home/kafka/kafka/bin/kafka-server-start.sh /home/kafka/kafka/config/server.properties > /home/kafka/kafka/kafka.log 2>&1'">>/etc/systemd/system/kafka.service &&\
+echo "ExecStop=/home/kafka/kafka/bin/kafka-server-stop.sh">>/etc/systemd/system/kafka.service &&\
+echo "Restart=on-abnormal">>/etc/systemd/system/kafka.service &&\
+echo "[Install]">>/etc/systemd/system/kafka.service &&\
+echo "WantedBy=multi-user.target">>/etc/systemd/system/kafka.service ;
 
+# Creating systemctl enable Kafka Server
 USER root:root
-# Start and test the Kafka server
 RUN \
-/opt/kafka_2.11-0.9.0.1/bin/kafka-server-start.sh config/server.properties&&\
-/opt/kafka_2.11-0.9.0.1/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test&&\
-bin/kafka-topics.sh --list --zookeeper localhost:2181;
+systemctl enable kafka;
 
 USER root:root
-#ENTRYPOINT ["/usr/sbin/init"]
-ENTRYPOINT ["/opt/kafka_2.11-0.9.0.1/bin/kafka-server-start.sh config/server.properties"]
-
+ENTRYPOINT ["/usr/sbin/init"]
