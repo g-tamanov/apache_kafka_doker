@@ -1,0 +1,10 @@
+
+version: "3.3"
+services:
+  postgres_repmgr:
+    container_name: apache_kafka_1
+    hostname: apache_kafka_1
+    build:
+      context: ./
+      dockerfile: kafka_1/dockerfile_kafka
+    privileged: true

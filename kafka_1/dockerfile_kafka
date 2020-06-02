@@ -1,0 +1,59 @@
+FROM centos:7
+MAINTAINER CFMC\gtamanov <gtamanov@cfmc.ru>
+#LABEL Remarks="postgres  repmgr  pgpool"
+
+ARG node_id
+
+# for centos systemd
+RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
+systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+
+# install services
+USER root:root
+RUN \
+yum sudo yum install java-1.8.0-openjdk.x86_64 -y&&\
+yum clean all;
+
+USER root:root
+# environment variables JAVA
+RUN \
+echo "export JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk">> /etc/profile&&\
+echo "export JRE_HOME=/usr/lib/jvm/jre">> /etc/profile&&\
+source /etc/profile;
+
+USER root:root
+# Download Apache Kafka
+RUN \
+wget http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz&&\
+tar -xvf kafka_2.11-0.9.0.1.tgz&&\
+mv kafka_2.11-0.9.0.1 /opt;
+
+USER root:root
+# Start and test Apache Kafka
+RUN \
+/opt/kafka_2.11-0.9.0.1/bin/zookeeper-server-start.sh -daemon config/zookeeper.properties;
+
+USER root:root
+# Modify the configuration of your Kafka server
+RUN \
+echo "export KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"">> bin/kafka-server-start.sh&&\
+echo "export KAFKA_HEAP_OPTS="-Xmx256M -Xms128M""">> bin/kafka-server-start.sh;
+
+USER root:root
+# Start and test the Kafka server
+RUN \
+/opt/kafka_2.11-0.9.0.1/bin/kafka-server-start.sh config/server.properties&&\
+/opt/kafka_2.11-0.9.0.1/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test&&\
+bin/kafka-topics.sh --list --zookeeper localhost:2181;
+
+USER root:root
+#ENTRYPOINT ["/usr/sbin/init"]
+ENTRYPOINT ["/opt/kafka_2.11-0.9.0.1/bin/kafka-server-start.sh config/server.properties"]
+
