@@ -71,6 +71,7 @@ echo "WantedBy=multi-user.target">>/etc/systemd/system/kafka.service ;
 # Creating systemctl enable Kafka Server
 USER root:root
 RUN \
+systemctl enable zookeeper;
 systemctl enable kafka;
 
 USER root:root
