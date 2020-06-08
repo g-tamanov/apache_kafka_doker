@@ -45,17 +45,6 @@ echo "delete.topic.enable = true">>~/kafka/config/server.properties;
 USER root:root
 RUN \
 ls /etc &&\
-echo "[Unit]">>/etc/systemd/system/zookeeper.service &&\
-echo "Requires=network.target remote-fs.target">>/etc/systemd/system/zookeeper.service &&\
-echo "After=network.target remote-fs.target">>/etc/systemd/system/zookeeper.service &&\
-echo "[Service]">>/etc/systemd/system/zookeeper.service &&\
-echo "Type=simple">>/etc/systemd/system/zookeeper.service &&\
-echo "User=kafka">>/etc/systemd/system/zookeeper.service &&\
-echo "ExecStart=/home/kafka/kafka/bin/zookeeper-server-start.sh /home/kafka/kafka/config/zookeeper.properties">>/etc/systemd/system/zookeeper.service &&\
-echo "ExecStop=/home/kafka/kafka/bin/zookeeper-server-stop.sh">>/etc/systemd/system/zookeeper.service &&\
-echo "Restart=on-abnormal">>/etc/systemd/system/zookeeper.service &&\
-echo "[Install]">>/etc/systemd/system/zookeeper.service &&\
-echo "WantedBy=multi-user.target">>/etc/systemd/system/zookeeper.service &&\
 echo "[Unit]">>/etc/systemd/system/kafka.service &&\
 echo "Requires=network.target remote-fs.target">>/etc/systemd/system/kafka.service &&\
 echo "After=network.target remote-fs.target">>/etc/systemd/system/kafka.service &&\
@@ -71,7 +60,6 @@ echo "WantedBy=multi-user.target">>/etc/systemd/system/kafka.service ;
 # Creating systemctl enable Kafka Server
 USER root:root
 RUN \
-systemctl enable zookeeper;
 systemctl enable kafka;
 
 USER root:root
