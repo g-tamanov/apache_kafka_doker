@@ -1,0 +1,61 @@
+
+version: "3.3"
+services:
+  zookeeper:
+    image: zookeeper:latest
+    hostname: "192.168.1.10"
+    container_name: "192.168.1.10"
+    volumes:
+      - ./docker/zookeeper/data:/data
+      - ./docker/zookeeper/datalog:/datalog
+    restart: always
+    networks:
+      myvlan:
+        ipv4_address: 192.168.1.10
+
+  kafka:
+    image: wurstmeister/kafka
+    hostname: "192.168.1.11"
+    container_name: "192.168.1.11"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ADVERTISED_HOST_NAME=192.168.1.11
+      - KAFKA_ADVERTISED_PORT=9092
+      - KAFKA_ZOOKEEPER_CONNECT=192.168.1.10:2181
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./docker/kafka/data:/var/lib/kafka/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    networks:
+      myvlan:
+        ipv4_address: 192.168.1.11
+
+  kafka2:
+    image: wurstmeister/kafka
+    hostname: "192.168.1.12"
+    container_name: "192.168.1.12"
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_ADVERTISED_HOST_NAME=192.168.1.12
+      - KAFKA_ADVERTISED_PORT=9092
+      - KAFKA_ZOOKEEPER_CONNECT=192.168.1.10:2181
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./docker/kafka/data:/var/lib/kafka/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    networks:
+      myvlan:
+        ipv4_address: 192.168.1.12
+
+networks:
+  myvlan:
+    driver: ipvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
