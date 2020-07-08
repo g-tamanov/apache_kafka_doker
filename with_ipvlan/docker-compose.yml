@@ -53,7 +53,7 @@ services:
 
 networks:
   myvlan:
-    driver: ipvlan
+    driver:  ipvlan
     driver_opts:
       parent: eth0
     ipam:
